@@ -24,3 +24,8 @@ examples thus some of the code is Copyright © 2001-2013 Python
 Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
+Resources used by yuchieh for this assignment:
+1. https://www.programiz.com/python-programming/methods/string/endswith
+2. https://docs.python.org/3/library/socketserver.html#request-handler-objects
+3. https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Evolution_of_HTTP
+4. https://developer.mozilla.org/en-US/docs/Learn/Common_questions/set_up_a_local_testing_server

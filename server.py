@@ -1,5 +1,5 @@
 #  coding: utf-8 
-import socketserver
+import socketserver, os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -38,26 +38,39 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.addr = self.parse(self.data)
         print ("Got a request of: %s\n" % self.data)
+
         self.respondcode = ""
         if "GET" in self.addr[0]:
-            self.respondcode = "200"
+            self.filepath = self.addr[1]
+            if self.filepath[0] == "/":
+                self.filepath = self.filepath[1:]
+
+            if self.filepath.endswith('.html') or self.filepath.endswith('.css'):
+                self.respondcode = "200"
+                self.get(self.filepath)
         else:
             self.respondcode = "405"
-
-        self.request.send(bytearray("HTTP/1.1 200 OK\n\n", 'utf-8'))
         self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
 
     def parse(self, data):
         self.parsed = []
         print(self.data)
-        # b'GET /index.html HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.79.1\r\nAccept: */*'
-        # ["b'GET", '/index.html', 'HTTP/1.1\\r\\nHost:', 'localhost:8080\\r\\nUser-Agent:', 'curl/7.79.1\\r\\nAccept:', "*/*'"]
+        # b'GET /www/index.html HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.79.1\r\nAccept: */*'
+        # ["b'GET", '/www/index.html', 'HTTP/1.1\\r\\nHost:', 'localhost:8080\\r\\nUser-Agent:', 'curl/7.79.1\\r\\nAccept:', "*/*'"]
         self.parsed = str(data).split(" ")
 
         return self.parsed
 
-    def send_request(self, host, port, request_data):
-        pass
+    def get(self, path):
+        print(path)
+        if os.path.isfile(path):
+            with open(path, 'rb') as file:
+                print("ehre")
+                self.request.send( bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+                self.request.sendall(file.read())
+        else:
+            self.respondcode = "404"
+            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
 
 
 if __name__ == "__main__":
@@ -81,6 +94,6 @@ if __name__ == "__main__":
 # 2. how to parsh; \n\n cut out
 # 3. index.html assumed the end pt of addr if not specified
 #
-# after parse; give proper http responce
+# after parse; give proper http response
 
 
