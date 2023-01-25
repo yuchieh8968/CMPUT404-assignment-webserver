@@ -29,3 +29,4 @@ Resources used by yuchieh for this assignment:
 2. https://docs.python.org/3/library/socketserver.html#request-handler-objects
 3. https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Evolution_of_HTTP
 4. https://developer.mozilla.org/en-US/docs/Learn/Common_questions/set_up_a_local_testing_server
+5. https://www.tutorialsteacher.com/python/python-read-write-file

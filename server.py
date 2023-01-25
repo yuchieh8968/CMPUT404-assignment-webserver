@@ -38,19 +38,33 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.addr = self.parse(self.data)
         print ("Got a request of: %s\n" % self.data)
-
+        print(self.addr)
         self.respondcode = ""
+
+        # check if the HTTP command is getting GET or not; if it is using GET
         if "GET" in self.addr[0]:
+            print('first if')
+
             self.filepath = self.addr[1]
+            # strip the last character for the filepath to be readable
             if self.filepath[0] == "/":
+                print('second if')
                 self.filepath = self.filepath[1:]
 
+            # remove first / character for the path to be readable
+            if self.filepath[-1] == "/":
+                self.filepath = self.filepath[:-1]
+
+            print(self.filepath)
+            # check if file is applicable to opening
             if self.filepath.endswith('.html') or self.filepath.endswith('.css'):
-                self.respondcode = "200"
+                print('third if')
+
                 self.get(self.filepath)
+        # if command is not GET then return 405 where command is invalid
         else:
             self.respondcode = "405"
-        self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+            self.get(self.respondcode)
 
     def parse(self, data):
         self.parsed = []
@@ -61,14 +75,23 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
         return self.parsed
 
+    # this function gets the data if its a valid command (GET) and check if file exists
     def get(self, path):
-        print(path)
         if os.path.isfile(path):
+            print("200 return")
+
             with open(path, 'rb') as file:
-                print("ehre")
+                self.respondcode = "200"
                 self.request.send( bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
                 self.request.sendall(file.read())
+        elif path == "405":
+            print("405 code returned")
+            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+
         else:
+            # paths not found
+            print("404 return")
             self.respondcode = "404"
             self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
 
@@ -83,17 +106,3 @@ if __name__ == "__main__":
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
-
-
-
-# wsl ubuntu
-# only show html and css
-# reject png
-#
-# 1. curl get familiar with
-# 2. how to parsh; \n\n cut out
-# 3. index.html assumed the end pt of addr if not specified
-#
-# after parse; give proper http response
-
-
