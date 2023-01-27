@@ -1,6 +1,7 @@
 #  coding: utf-8 
 import socketserver, os
 
+
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,66 +39,135 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.addr = self.parse(self.data)
         print ("Got a request of: %s\n" % self.data)
-        print(self.addr)
         self.respondcode = ""
 
         # check if the HTTP command is getting GET or not; if it is using GET
         if "GET" in self.addr[0]:
-            print('first if')
-
             self.filepath = self.addr[1]
-            # strip the last character for the filepath to be readable
+            print("first", self.filepath)
+
+            # strip the first character for the filepath to be readable
             if self.filepath[0] == "/":
-                print('second if')
                 self.filepath = self.filepath[1:]
+            if len(self.filepath)==0:
+                self.filepath = "index.html"
+            print("second", self.filepath)
 
-            # remove first / character for the path to be readable
-            if self.filepath[-1] == "/":
-                self.filepath = self.filepath[:-1]
 
-            print(self.filepath)
-            # check if file is applicable to opening
-            if self.filepath.endswith('.html') or self.filepath.endswith('.css'):
-                print('third if')
-
-                self.get(self.filepath)
+            self.get(self.filepath)
         # if command is not GET then return 405 where command is invalid
         else:
+            print("command not get")
             self.respondcode = "405"
             self.get(self.respondcode)
 
     def parse(self, data):
         self.parsed = []
-        print(self.data)
-        # b'GET /www/index.html HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.79.1\r\nAccept: */*'
-        # ["b'GET", '/www/index.html', 'HTTP/1.1\\r\\nHost:', 'localhost:8080\\r\\nUser-Agent:', 'curl/7.79.1\\r\\nAccept:', "*/*'"]
         self.parsed = str(data).split(" ")
 
         return self.parsed
 
-    # this function gets the data if its a valid command (GET) and check if file exists
+    # get function gets the request to return data from given path
     def get(self, path):
+        print("get function")
+        # if path fully exist then return 200 code
         if os.path.isfile(path):
-            print("200 return")
+            print("file path exists")
+            # if path is too long or command to go back up in directories is given return 404
+            if len(path)>20 and ".." in path:
+                self.respondcode = "404"
+                self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+            else:
+                # open the file at the openable path and return code 200
+                with open(path, 'rb') as file:
+                    self.respondcode = "200"
+                    self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+                    self.request.sendall(file.read())
 
-            with open(path, 'rb') as file:
-                self.respondcode = "200"
-                self.request.send( bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
-                self.request.sendall(file.read())
+        # if the HTTP request is not GET, then return 405 Method Not allowed
+        # the 405 comes from handle function where it filters out non-GET requests and send code 405 as path into the get function
         elif path == "405":
-            print("405 code returned")
-            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
             self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
 
+        # if path is not a full address and also a GET request
         else:
-            # paths not found
-            print("404 return")
-            self.respondcode = "404"
-            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
+            print("path doesn't exist")
+            # call find file to retrieve full path from the local folder
+            # i.e.= /index.html -> /www/index.html
+            index_html_path = self.find_file(path, ".")
+            print(index_html_path)
+            contentType = "\n\n"
+
+            try:
+                # if path cant be found try adding www in front of it
+                if index_html_path == None:
+                    print("inside here")
+                    index_html_path = "www/"+path
+                    print("trying path", index_html_path)
+                    open(index_html_path, 'rb')
+
+                if ".html" in index_html_path:
+                    contentType = "\r\nContent-Type: text/html\r\n\r\n"
+
+                elif ".css" in index_html_path:
+                    contentType = "\r\nContent-Type: text/css\r\n\r\n"
+
+                if index_html_path:
+                    try:
+                        with open(index_html_path, 'rb') as file:
+                            self.respondcode = "200"
+                            self.request.send(bytearray(
+                                "HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
+                                'utf-8'))
+                            self.request.sendall(file.read())
+                    except IsADirectoryError:
+                        index_html_path += "/index.html"
+                        with open(index_html_path, 'rb') as file:
+                            self.respondcode = "200"
+                            self.request.send(bytearray(
+                                "HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
+                                'utf-8'))
+                            self.request.sendall(file.read())
+                else:
+                    print("Paths not found")
+                    # paths not found
+                    self.respondcode = "404"
+                    self.request.send(
+                        bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
+                                  'utf-8'))
+
+
+            except FileNotFoundError:
+                print("filenotfound error")
+                self.respondcode = "404"
+                self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
+
+
+
+
+
+    # find_file returns the full path to a given file_name, else None if can't find it in the directory
+    def find_file(self, file_name, directory):
+        if file_name[-1] == "/":
+            file_name = file_name[:-1]
+        print("find file", file_name)
+        for root, dirs, files in os.walk(directory):
+            if file_name in files:
+                print("fixed file path", os.path.join(root, file_name))
+                return os.path.join(root, file_name)
+            elif file_name in root:
+                print("fixed file path", os.path.join(root) + "/")
+                return os.path.join(root)
+        return None
+
+
+
+
+
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 8080
+    HOST, PORT = "127.0.0.1", 8080
 
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to localhost on port 8080
@@ -106,3 +176,9 @@ if __name__ == "__main__":
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
+
+
+# if its http://127.0.0.1:8080/ should it just return www/index.html
+# what is mime type stuff
+# BASEURL = "http://127.0.0.1:8080/deep.css"
+# if 301 occurs, should we output the correct page or just 301
