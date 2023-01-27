@@ -147,15 +147,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
                         # rn if its a valid path to directory with index, append index.html to it and open it ; open it wiht
                         # ---------------------------------------------------------------------------------------------------------------------------
                         print("Reached inadirError with file path", index_html_path)
-                        index_html_path += "index.html"
-                        contentType = "\r\nContent-Type: text/html\r\n\r\n"
-                        print(index_html_path)
 
-                        with open(index_html_path, 'rb') as file:
-                            self.respondcode = "200"
-                            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
-                            self.request.sendall(file.read())
-
+                        self.respondcode = "301"
+                        self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\r\nLocation: " + index_html_path + "\r\n\r\n", 'utf-8'))
+                        self.get(index_html_path+"index.html")
                 else:
                     print("Paths not found")
                     # paths not found
@@ -167,6 +162,32 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.respondcode = "404"
                 self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
 
+
+
+
+
+    # # find_file returns the full path to a given file_name, else None if can't find it in the directory
+    # def find_file(self, file_name, directory):
+    #     print ("Called find_file to find full path")
+    #     # if the path ends in / indicating its a directory
+    #     if file_name[-1] == "/":
+    #         file_name = file_name[:-1]
+    #     # if path doesn't end in / means its not a directory but a file
+    #         for root, dirs, files in os.walk(directory):
+    #             if file_name in files:
+    #                 print("files", files)
+    #                 print("fixed file path", os.path.join(root, file_name))
+    #                 if "www" not in root:
+    #                     return None
+    #                 else:
+    #                     return os.path.join(root, file_name)
+    #             elif file_name in root:
+    #                 print("fixed file path", os.path.join(root) + "/")
+    #                 if "www" not in root:
+    #                     return None
+    #                 else:
+    #                     return os.path.join(root)
+    #         return None
 
     # find_file returns the full path to a given file_name, else None if can't find it in the directory
     def find_file(self, file_name, directory):
