@@ -27,34 +27,43 @@ import socketserver, os
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+# setting default messages for each httpcode
 HTTPCODE = {"200":"OK",
-            "301": "Paths Moved",
+            "301":"Moved Permanently",
             "404":"Paths Not Found",
-            "405": "Method Not Allowed"}
+            "405":"Method Not Allowed"}
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
         self.data = self.request.recv(1024).strip()
+
+        # this parse the data into interpratable string
         self.addr = self.parse(self.data)
         print ("Got a request of: %s\n" % self.data)
+
+        # initialize empty respond code
         self.respondcode = ""
 
-        # check if the HTTP command is getting GET or not; if it is using GET
+        # check if the HTTP command is getting GET or not; proceed if it is GET
         if "GET" in self.addr[0]:
+            # retrieve file path from parsed input
             self.filepath = self.addr[1]
             print("first", self.filepath)
 
             # strip the first character for the filepath to be readable
             if self.filepath[0] == "/":
                 self.filepath = self.filepath[1:]
+
+            # if user requests local folder with no file specified, serve index.html
             if len(self.filepath)==0:
                 self.filepath = "index.html"
             print("second", self.filepath)
 
-
+            # call function get to send requests
             self.get(self.filepath)
+
         # if command is not GET then return 405 where command is invalid
         else:
             print("command not get")
@@ -69,12 +78,13 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     # get function gets the request to return data from given path
     def get(self, path):
-        print("get function")
+        print("Within get function")
+
         # if path fully exist then return 200 code
         if os.path.isfile(path):
-            print("file path exists")
+            print("file path pre-exists")
             # if path is too long or command to go back up in directories is given return 404
-            if len(path)>20 and ".." in path:
+            if len(path)>30 and ".." in path:
                 self.respondcode = "404"
                 self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n", 'utf-8'))
             else:
@@ -102,9 +112,14 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 # if path cant be found try adding www in front of it
                 if index_html_path == None:
                     print("inside here")
-                    index_html_path = "www/"+path
-                    print("trying path", index_html_path)
-                    open(index_html_path, 'rb')
+
+                    try:
+                        index_html_path = "www/" + path
+                        open(index_html_path, 'rb')
+                    except IsADirectoryError:
+                        index_html_path = path+"/"
+
+                    print(index_html_path)
 
                 if ".html" in index_html_path:
                     contentType = "\r\nContent-Type: text/html\r\n\r\n"
@@ -117,26 +132,21 @@ class MyWebServer(socketserver.BaseRequestHandler):
                         with open(index_html_path, 'rb') as file:
                             self.respondcode = "200"
                             self.request.send(bytearray(
-                                "HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
-                                'utf-8'))
+                                "HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,'utf-8'))
                             self.request.sendall(file.read())
                     except IsADirectoryError:
                         index_html_path += "/index.html"
+                        contentType = "\r\nContent-Type: text/html\r\n\r\n"
                         with open(index_html_path, 'rb') as file:
                             self.respondcode = "200"
-                            self.request.send(bytearray(
-                                "HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
-                                'utf-8'))
+                            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
                             self.request.sendall(file.read())
                 else:
                     print("Paths not found")
                     # paths not found
                     self.respondcode = "404"
                     self.request.send(
-                        bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,
-                                  'utf-8'))
-
-
+                        bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType,'utf-8'))
             except FileNotFoundError:
                 print("filenotfound error")
                 self.respondcode = "404"
@@ -148,17 +158,25 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     # find_file returns the full path to a given file_name, else None if can't find it in the directory
     def find_file(self, file_name, directory):
+        # if the path ends in / indicating its a directory
         if file_name[-1] == "/":
             file_name = file_name[:-1]
-        print("find file", file_name)
-        for root, dirs, files in os.walk(directory):
-            if file_name in files:
-                print("fixed file path", os.path.join(root, file_name))
-                return os.path.join(root, file_name)
-            elif file_name in root:
-                print("fixed file path", os.path.join(root) + "/")
-                return os.path.join(root)
-        return None
+        # if path doesn't end in / means its not a directory but a file
+            for root, dirs, files in os.walk(directory):
+                if file_name in files:
+                    print("files", files)
+                    print("fixed file path", os.path.join(root, file_name))
+                    if "www" not in root:
+                        return None
+                    else:
+                        return os.path.join(root, file_name)
+                elif file_name in root:
+                    print("fixed file path", os.path.join(root) + "/")
+                    if "www" not in root:
+                        return None
+                    else:
+                        return os.path.join(root)
+            return None
 
 
 
@@ -178,7 +196,5 @@ if __name__ == "__main__":
     server.serve_forever()
 
 
-# if its http://127.0.0.1:8080/ should it just return www/index.html
-# what is mime type stuff
-# BASEURL = "http://127.0.0.1:8080/deep.css"
+# handle 301
 # if 301 occurs, should we output the correct page or just 301

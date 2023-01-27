@@ -40,5 +40,6 @@ Resources used by yuchieh for this assignment:
 9. https://stackoverflow.com/users/3122880/vikas-ojha
    https://stackoverflow.com/questions/32651362/how-do-i-set-the-content-type-for-post-requests-in-python-requests-library
    https://stackoverflow.com/a/32651400
-10.
+10.https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+11.
    
