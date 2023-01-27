@@ -146,15 +146,22 @@ class MyWebServer(socketserver.BaseRequestHandler):
                     except IsADirectoryError:
                         # rn if its a valid path to directory with index, append index.html to it and open it ; open it wiht
                         # ---------------------------------------------------------------------------------------------------------------------------
-                        print("Reached inadirError with file path", index_html_path)
-                        index_html_path += "index.html"
-                        contentType = "\r\nContent-Type: text/html\r\n\r\n"
-                        print(index_html_path)
+                        if self.filepath[-1] != "/" and ".css" not in self.filepath and ".html" not in self.filepath:
+                            print("should be 301")
+                            self.respondcode = "301"
+                            self.request.send(
+                                bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + "\n\n",
+                                          'utf-8'))
+                        else:
+                            print("Reached inadirError with file path", index_html_path)
+                            index_html_path += "index.html"
+                            contentType = "\r\nContent-Type: text/html\r\n\r\n"
+                            print(index_html_path)
 
-                        with open(index_html_path, 'rb') as file:
-                            self.respondcode = "200"
-                            self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
-                            self.request.sendall(file.read())
+                            with open(index_html_path, 'rb') as file:
+                                self.respondcode = "200"
+                                self.request.send(bytearray("HTTP/1.1 " + self.respondcode + " " + HTTPCODE[self.respondcode] + contentType, 'utf-8'))
+                                self.request.sendall(file.read())
 
                 else:
                     print("Paths not found")
